@@ -176,44 +176,34 @@ public class Utils {
             String dirPath,
             String fileName
     ) throws IOException {
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            InputStream is = null;
-            byte[] buf = new byte[2048];
-            int len;
-            FileOutputStream fos = null;
-            try {
-                is = response.body().byteStream();
-                File dir = new File(dirPath);
-                if (!dir.exists()) {
-                    dir.mkdirs();
-                }
-                File file = new File(dir, fileName);
-                fos = new FileOutputStream(file);
-                while ((len = is.read(buf)) != -1) {
-                    fos.write(buf, 0, len);
-                }
-                fos.flush();
-            } finally {
-                try {
-                    if (is != null) is.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                try {
-                    if (fos != null) fos.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+        InputStream is = null;
+        byte[] buf = new byte[2048];
+        int len;
+        FileOutputStream fos = null;
+        try {
+            is = response.body().byteStream();
+            File dir = new File(dirPath);
+            if (!dir.exists()) {
+                dir.mkdirs();
             }
-        } else {
-            /*InputStream is = response.body().byteStream();
-            context.getContentResolver().openOutputStream(destinationUri, "w") ?.use {
-                responseBody.byteStream().copyTo(it)
-            }*/
-
+            File file = new File(dir, fileName);
+            fos = new FileOutputStream(file);
+            while ((len = is.read(buf)) != -1) {
+                fos.write(buf, 0, len);
+            }
+            fos.flush();
+        } finally {
+            try {
+                if (is != null) is.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                if (fos != null) fos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-
     }
 
     public static void sendAnalytics(final AnalyticsListener analyticsListener,
