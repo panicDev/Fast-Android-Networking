@@ -43,6 +43,6 @@ dependencies {
     androidTestImplementation "com.squareup.okhttp3:mockwebserver:$rootProject.ext.mockWebServerVersion"
     api "com.squareup.okhttp3:okhttp:$rootProject.ext.okHttp3Version"
     api "com.google.code.gson:gson:$rootProject.ext.gsonVersion"
-    api "com.android.support:appcompat-v7:$rootProject.ext.supportAppCompatVersion"
+    api "androidx.appcompat:appcompat:$rootProject.ext.appCompatVersion"
 }
 //apply from: 'upload.gradle'

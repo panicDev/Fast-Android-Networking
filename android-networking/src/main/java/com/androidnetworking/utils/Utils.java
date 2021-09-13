@@ -20,6 +20,7 @@ package com.androidnetworking.utils;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Build;
 import android.widget.ImageView;
 
 import com.androidnetworking.common.ANConstants;
@@ -35,6 +36,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.FileNameMap;
 import java.net.URLConnection;
+import java.time.Duration;
 
 import okhttp3.Cache;
 import okhttp3.Response;
@@ -169,36 +171,49 @@ public class Utils {
         return (int) n;
     }
 
-    public static void saveFile(Response response, String dirPath,
-                                String fileName) throws IOException {
-        InputStream is = null;
-        byte[] buf = new byte[2048];
-        int len;
-        FileOutputStream fos = null;
-        try {
-            is = response.body().byteStream();
-            File dir = new File(dirPath);
-            if (!dir.exists()) {
-                dir.mkdirs();
-            }
-            File file = new File(dir, fileName);
-            fos = new FileOutputStream(file);
-            while ((len = is.read(buf)) != -1) {
-                fos.write(buf, 0, len);
-            }
-            fos.flush();
-        } finally {
+    public static void saveFile(
+            Response response,
+            String dirPath,
+            String fileName
+    ) throws IOException {
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            InputStream is = null;
+            byte[] buf = new byte[2048];
+            int len;
+            FileOutputStream fos = null;
             try {
-                if (is != null) is.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+                is = response.body().byteStream();
+                File dir = new File(dirPath);
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
+                File file = new File(dir, fileName);
+                fos = new FileOutputStream(file);
+                while ((len = is.read(buf)) != -1) {
+                    fos.write(buf, 0, len);
+                }
+                fos.flush();
+            } finally {
+                try {
+                    if (is != null) is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    if (fos != null) fos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-            try {
-                if (fos != null) fos.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        } else {
+            /*InputStream is = response.body().byteStream();
+            context.getContentResolver().openOutputStream(destinationUri, "w") ?.use {
+                responseBody.byteStream().copyTo(it)
+            }*/
+
         }
+
     }
 
     public static void sendAnalytics(final AnalyticsListener analyticsListener,
