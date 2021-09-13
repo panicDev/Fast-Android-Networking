@@ -1,7 +1,7 @@
 package com.androidnetworking.interfaces;
 
-import okhttp3.Response;
+import java.io.InputStream;
 
 public interface OnFileSaveListener {
-    public void onFileSave(Response okHttpResponse);
+    public void onFileSave(InputStream inputStream);
 }
