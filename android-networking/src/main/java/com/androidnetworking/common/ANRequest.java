@@ -35,6 +35,7 @@ import com.androidnetworking.interfaces.OkHttpResponseAndJSONObjectRequestListen
 import com.androidnetworking.interfaces.OkHttpResponseAndParsedRequestListener;
 import com.androidnetworking.interfaces.OkHttpResponseAndStringRequestListener;
 import com.androidnetworking.interfaces.OkHttpResponseListener;
+import com.androidnetworking.interfaces.OnFileSaveListener;
 import com.androidnetworking.interfaces.ParsedRequestListener;
 import com.androidnetworking.interfaces.StringRequestListener;
 import com.androidnetworking.interfaces.UploadProgressListener;
@@ -115,6 +116,7 @@ public class ANRequest<T extends ANRequest> {
     private boolean isDelivered;
     private boolean isRunning;
     private int mPercentageThresholdForCancelling = 0;
+    private OnFileSaveListener fileSaveListener;
     private JSONArrayRequestListener mJSONArrayRequestListener;
     private JSONObjectRequestListener mJSONObjectRequestListener;
     private StringRequestListener mStringRequestListener;
@@ -200,6 +202,7 @@ public class ANRequest<T extends ANRequest> {
         this.mExecutor = builder.mExecutor;
         this.mOkHttpClient = builder.mOkHttpClient;
         this.mUserAgent = builder.mUserAgent;
+        this.fileSaveListener = builder.fileSaveListener;
     }
 
     public ANRequest(MultiPartBuilder builder) {
@@ -533,6 +536,11 @@ public class ANRequest<T extends ANRequest> {
     public String getDirPath() {
         return mDirPath;
     }
+
+    public OnFileSaveListener getFileSaveListener() {
+        return fileSaveListener;
+    }
+
 
     public String getFileName() {
         return mFileName;
@@ -1443,6 +1451,12 @@ public class ANRequest<T extends ANRequest> {
         private Executor mExecutor;
         private OkHttpClient mOkHttpClient;
         private String mUserAgent;
+        private OnFileSaveListener fileSaveListener;
+
+        public DownloadBuilder(String url,OnFileSaveListener fileSaveListener) {
+            this.mUrl = url;
+            this.fileSaveListener = fileSaveListener;
+        }
 
         public DownloadBuilder(String url, String dirPath, String fileName) {
             this.mUrl = url;
