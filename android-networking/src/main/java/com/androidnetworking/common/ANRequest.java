@@ -1453,7 +1453,8 @@ public class ANRequest<T extends ANRequest> {
         private String mUserAgent;
         private OnFileSaveListener fileSaveListener;
 
-        public DownloadBuilder(OnFileSaveListener fileSaveListener) {
+        public DownloadBuilder(String url,OnFileSaveListener fileSaveListener) {
+            this.mUrl = url;
             this.fileSaveListener = fileSaveListener;
         }
 
