@@ -187,7 +187,11 @@ public final class InternalNetworking {
             final long startTime = System.currentTimeMillis();
             final long startBytes = TrafficStats.getTotalRxBytes();
             okHttpResponse = request.getCall().execute();
-            Utils.saveFile(okHttpResponse, request.getDirPath(), request.getFileName());
+            if (request.getDirPath() != null)
+                Utils.saveFile(okHttpResponse, request.getDirPath(), request.getFileName());
+            else
+                request.getFileSaveListener().onFileSave(okHttpResponse.body().byteStream());
+
             final long timeTaken = System.currentTimeMillis() - startTime;
             if (okHttpResponse.cacheResponse() == null) {
                 final long finalBytes = TrafficStats.getTotalRxBytes();

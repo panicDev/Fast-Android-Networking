@@ -27,6 +27,7 @@ import com.androidnetworking.common.ConnectionQuality;
 import com.androidnetworking.core.Core;
 import com.androidnetworking.interceptors.HttpLoggingInterceptor.Level;
 import com.androidnetworking.interfaces.ConnectionQualityChangeListener;
+import com.androidnetworking.interfaces.OnFileSaveListener;
 import com.androidnetworking.interfaces.Parser;
 import com.androidnetworking.internal.ANImageLoader;
 import com.androidnetworking.internal.ANRequestQueue;
@@ -191,6 +192,10 @@ public class AndroidNetworking {
      */
     public static ANRequest.DownloadBuilder download(String url, String dirPath, String fileName) {
         return new ANRequest.DownloadBuilder(url, dirPath, fileName);
+    }
+
+    public static ANRequest.DownloadBuilder download(String url, OnFileSaveListener onFileSaveListener) {
+        return new ANRequest.DownloadBuilder(url, onFileSaveListener);
     }
 
     /**
