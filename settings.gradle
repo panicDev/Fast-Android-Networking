@@ -15,4 +15,5 @@
  *    limitations under the License.
  */
 
-include ':app', ':android-networking', ':rx-android-networking', ':rxsampleapp', ':jackson-android-networking', ':rx2-android-networking', ':rx2sampleapp'
+include ':app', ':android-networking', ':rx-android-networking', ':rxsampleapp', ':jackson-android-networking', ':rx2-android-networking', ':rx2sampleapp',
+        ':rx3-android-networking', ':rx3sampleapp'
