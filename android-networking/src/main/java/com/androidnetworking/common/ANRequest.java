@@ -19,7 +19,10 @@ package com.androidnetworking.common;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.Log;
 import android.widget.ImageView;
+
+import androidx.annotation.NonNull;
 
 import com.androidnetworking.core.Core;
 import com.androidnetworking.error.ANError;
@@ -52,11 +55,13 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -72,29 +77,31 @@ import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
+import okio.BufferedSource;
 import okio.Okio;
 
 /**
  * Created by amitshekhar on 26/03/16.
  */
-@SuppressWarnings({"unchecked", "unused"})
+@SuppressWarnings({"unchecked", "unused", "rawtypes"})
 public class ANRequest<T extends ANRequest> {
 
     private final static String TAG = ANRequest.class.getSimpleName();
 
-    private int mMethod;
-    private Priority mPriority;
-    private int mRequestType;
-    private String mUrl;
+    private final int mMethod;
+    private final Priority mPriority;
+    private final int mRequestType;
+    private final String mUrl;
     private int sequenceNumber;
-    private Object mTag;
+    private final Object mTag;
     private ResponseType mResponseType;
-    private HashMap<String, List<String>> mHeadersMap = new HashMap<>();
+    private final HashMap<String, List<String>> mHeadersMap;
     private HashMap<String, String> mBodyParameterMap = new HashMap<>();
     private HashMap<String, String> mUrlEncodedFormBodyParameterMap = new HashMap<>();
     private HashMap<String, MultipartStringBody> mMultiPartParameterMap = new HashMap<>();
-    private HashMap<String, List<String>> mQueryParameterMap = new HashMap<>();
-    private HashMap<String, String> mPathParameterMap = new HashMap<>();
+    private final HashMap<String, List<String>> mQueryParameterMap;
+    private final HashMap<String, String> mPathParameterMap;
     private HashMap<String, List<MultipartFileBody>> mMultiPartFileMap = new HashMap<>();
     private String mDirPath;
     private String mFileName;
@@ -137,10 +144,11 @@ public class ANRequest<T extends ANRequest> {
     private int mMaxWidth;
     private int mMaxHeight;
     private ImageView.ScaleType mScaleType;
-    private CacheControl mCacheControl = null;
-    private Executor mExecutor = null;
-    private OkHttpClient mOkHttpClient = null;
-    private String mUserAgent = null;
+    private final CacheControl mCacheControl;
+    private final Executor mExecutor;
+    private final OkHttpClient mOkHttpClient;
+    private String mUserAgent;
+    private boolean mLogResponseBody;
     private Type mType = null;
 
     public ANRequest(GetRequestBuilder builder) {
@@ -184,6 +192,7 @@ public class ANRequest<T extends ANRequest> {
         if (builder.mCustomContentType != null) {
             this.customMediaType = MediaType.parse(builder.mCustomContentType);
         }
+        this.mLogResponseBody = builder.mLogResponseBody;
     }
 
     public ANRequest(DownloadBuilder builder) {
@@ -203,6 +212,7 @@ public class ANRequest<T extends ANRequest> {
         this.mOkHttpClient = builder.mOkHttpClient;
         this.mUserAgent = builder.mUserAgent;
         this.fileSaveListener = builder.fileSaveListener;
+        this.mLogResponseBody = builder.mLogResponseBody;
     }
 
     public ANRequest(MultiPartBuilder builder) {
@@ -224,6 +234,7 @@ public class ANRequest<T extends ANRequest> {
         if (builder.mCustomContentType != null) {
             this.customMediaType = MediaType.parse(builder.mCustomContentType);
         }
+        this.mLogResponseBody = builder.mLogResponseBody;
     }
 
     public void getAsJSONObject(JSONObjectRequestListener requestListener) {
@@ -412,7 +423,7 @@ public class ANRequest<T extends ANRequest> {
         for (HashMap.Entry<String, String> entry : mPathParameterMap.entrySet()) {
             tempUrl = tempUrl.replace("{" + entry.getKey() + "}", String.valueOf(entry.getValue()));
         }
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(tempUrl).newBuilder();
+        HttpUrl.Builder urlBuilder = Objects.requireNonNull(HttpUrl.parse(tempUrl)).newBuilder();
         if (mQueryParameterMap != null) {
             Set<Map.Entry<String, List<String>>> entries = mQueryParameterMap.entrySet();
             for (Map.Entry<String, List<String>> entry : entries) {
@@ -477,12 +488,9 @@ public class ANRequest<T extends ANRequest> {
     }
 
     public DownloadProgressListener getDownloadProgressListener() {
-        return new DownloadProgressListener() {
-            @Override
-            public void onProgress(final long bytesDownloaded, final long totalBytes) {
-                if (mDownloadProgressListener != null && !isCancelled) {
-                    mDownloadProgressListener.onProgress(bytesDownloaded, totalBytes);
-                }
+        return (bytesDownloaded, totalBytes) -> {
+            if (mDownloadProgressListener != null && !isCancelled) {
+                mDownloadProgressListener.onProgress(bytesDownloaded, totalBytes);
             }
         };
     }
@@ -492,24 +500,18 @@ public class ANRequest<T extends ANRequest> {
         if (mDownloadListener != null) {
             if (!isCancelled) {
                 if (mExecutor != null) {
-                    mExecutor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (mDownloadListener != null) {
-                                mDownloadListener.onDownloadComplete();
-                            }
-                            finish();
+                    mExecutor.execute(() -> {
+                        if (mDownloadListener != null) {
+                            mDownloadListener.onDownloadComplete();
                         }
+                        finish();
                     });
                 } else {
-                    Core.getInstance().getExecutorSupplier().forMainThreadTasks().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (mDownloadListener != null) {
-                                mDownloadListener.onDownloadComplete();
-                            }
-                            finish();
+                    Core.getInstance().getExecutorSupplier().forMainThreadTasks().execute(() -> {
+                        if (mDownloadListener != null) {
+                            mDownloadListener.onDownloadComplete();
                         }
+                        finish();
                     });
                 }
             } else {
@@ -522,13 +524,10 @@ public class ANRequest<T extends ANRequest> {
     }
 
     public UploadProgressListener getUploadProgressListener() {
-        return new UploadProgressListener() {
-            @Override
-            public void onProgress(final long bytesUploaded, final long totalBytes) {
-                mProgress = (int) ((bytesUploaded * 100) / totalBytes);
-                if (mUploadProgressListener != null && !isCancelled) {
-                    mUploadProgressListener.onProgress(bytesUploaded, totalBytes);
-                }
+        return (bytesUploaded, totalBytes) -> {
+            mProgress = (int) ((bytesUploaded * 100) / totalBytes);
+            if (mUploadProgressListener != null && !isCancelled) {
+                mUploadProgressListener.onProgress(bytesUploaded, totalBytes);
             }
         };
     }
@@ -621,6 +620,19 @@ public class ANRequest<T extends ANRequest> {
     }
 
     public ANResponse parseResponse(Response response) {
+
+        if (mLogResponseBody) {
+            try {
+                ResponseBody responseBody = response.body();
+                BufferedSource source = Objects.requireNonNull(responseBody).source();
+                source.request(Long.MAX_VALUE);
+                String responseBodyString = source.getBuffer().clone().readUtf8();
+                Log.d(TAG, "ResponseBody: " + responseBodyString);
+            } catch (IOException e) {
+                return ANResponse.failed(Utils.getErrorForParse(new ANError(e)));
+            }
+        }
+
         switch (mResponseType) {
             case JSON_ARRAY:
                 try {
@@ -631,7 +643,7 @@ public class ANRequest<T extends ANRequest> {
                 }
             case JSON_OBJECT:
                 try {
-                    JSONObject json = new JSONObject(Okio.buffer(response.body()
+                    JSONObject json = new JSONObject(Okio.buffer(Objects.requireNonNull(response.body())
                             .source()).readUtf8());
                     return ANResponse.success(json);
                 } catch (Exception e) {
@@ -705,18 +717,9 @@ public class ANRequest<T extends ANRequest> {
             isDelivered = true;
             if (!isCancelled) {
                 if (mExecutor != null) {
-                    mExecutor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            deliverSuccessResponse(response);
-                        }
-                    });
+                    mExecutor.execute(() -> deliverSuccessResponse(response));
                 } else {
-                    Core.getInstance().getExecutorSupplier().forMainThreadTasks().execute(new Runnable() {
-                        public void run() {
-                            deliverSuccessResponse(response);
-                        }
-                    });
+                    Core.getInstance().getExecutorSupplier().forMainThreadTasks().execute(() -> deliverSuccessResponse(response));
                 }
             } else {
                 ANError anError = new ANError();
@@ -788,23 +791,18 @@ public class ANRequest<T extends ANRequest> {
             isDelivered = true;
             if (!isCancelled) {
                 if (mExecutor != null) {
-                    mExecutor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (mOkHttpResponseListener != null) {
-                                mOkHttpResponseListener.onResponse(response);
-                            }
-                            finish();
+                    mExecutor.execute(() -> {
+                        if (mOkHttpResponseListener != null) {
+                            mOkHttpResponseListener.onResponse(response);
                         }
+                        finish();
                     });
                 } else {
-                    Core.getInstance().getExecutorSupplier().forMainThreadTasks().execute(new Runnable() {
-                        public void run() {
-                            if (mOkHttpResponseListener != null) {
-                                mOkHttpResponseListener.onResponse(response);
-                            }
-                            finish();
+                    Core.getInstance().getExecutorSupplier().forMainThreadTasks().execute(() -> {
+                        if (mOkHttpResponseListener != null) {
+                            mOkHttpResponseListener.onResponse(response);
                         }
+                        finish();
                     });
                 }
             } else {
@@ -824,32 +822,34 @@ public class ANRequest<T extends ANRequest> {
     public RequestBody getRequestBody() {
         if (mApplicationJsonString != null) {
             if (customMediaType != null) {
-                return RequestBody.create(customMediaType, mApplicationJsonString);
+                return RequestBody.Companion.create(mApplicationJsonString, customMediaType);
             }
-            return RequestBody.create(JSON_MEDIA_TYPE, mApplicationJsonString);
+            return RequestBody.Companion.create(mApplicationJsonString, JSON_MEDIA_TYPE);
         } else if (mStringBody != null) {
             if (customMediaType != null) {
-                return RequestBody.create(customMediaType, mStringBody);
+                return RequestBody.Companion.create(mStringBody, customMediaType);
             }
-            return RequestBody.create(MEDIA_TYPE_MARKDOWN, mStringBody);
+            return RequestBody.Companion.create(mStringBody, MEDIA_TYPE_MARKDOWN);
         } else if (mFile != null) {
             if (customMediaType != null) {
-                return RequestBody.create(customMediaType, mFile);
+                return RequestBody.Companion.create(mFile, customMediaType);
             }
-            return RequestBody.create(MEDIA_TYPE_MARKDOWN, mFile);
+            return RequestBody.Companion.create(mFile, MEDIA_TYPE_MARKDOWN);
         } else if (mByte != null) {
             if (customMediaType != null) {
-                return RequestBody.create(customMediaType, mByte);
+                return RequestBody.Companion.create(mByte,customMediaType);
             }
-            return RequestBody.create(MEDIA_TYPE_MARKDOWN, mByte);
+            return RequestBody.Companion.create(mByte, MEDIA_TYPE_MARKDOWN);
         } else {
             FormBody.Builder builder = new FormBody.Builder();
             try {
                 for (HashMap.Entry<String, String> entry : mBodyParameterMap.entrySet()) {
-                    builder.add(entry.getKey(), entry.getValue());
+                    if (entry.getKey() != null && entry.getValue() != null)
+                        builder.add(entry.getKey(), entry.getValue());
                 }
                 for (HashMap.Entry<String, String> entry : mUrlEncodedFormBodyParameterMap.entrySet()) {
-                    builder.addEncoded(entry.getKey(), entry.getValue());
+                    if (entry.getKey() != null && entry.getValue() != null)
+                        builder.addEncoded(entry.getKey(), entry.getValue());
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -870,7 +870,7 @@ public class ANRequest<T extends ANRequest> {
                 }
                 builder.addPart(Headers.of("Content-Disposition",
                         "form-data; name=\"" + entry.getKey() + "\""),
-                        RequestBody.create(mediaType, stringBody.value));
+                        RequestBody.Companion.create(stringBody.value,mediaType));
             }
             for (HashMap.Entry<String, List<MultipartFileBody>> entry : mMultiPartFileMap.entrySet()) {
                 List<MultipartFileBody> fileBodies = entry.getValue();
@@ -882,7 +882,7 @@ public class ANRequest<T extends ANRequest> {
                     } else {
                         mediaType = MediaType.parse(Utils.getMimeType(fileName));
                     }
-                    RequestBody requestBody = RequestBody.create(mediaType, fileBody.file);
+                    RequestBody requestBody = RequestBody.Companion.create(fileBody.file,mediaType);
                     builder.addPart(Headers.of("Content-Disposition",
                             "form-data; name=\"" + entry.getKey() + "\"; filename=\"" + fileName + "\""),
                             requestBody);
@@ -931,21 +931,27 @@ public class ANRequest<T extends ANRequest> {
 
     public static class GetRequestBuilder<T extends GetRequestBuilder> implements RequestBuilder {
         private Priority mPriority = Priority.MEDIUM;
-        private int mMethod = Method.GET;
-        private String mUrl;
+        private final int mMethod;
+        private final String mUrl;
         private Object mTag;
         private Bitmap.Config mDecodeConfig;
-        private BitmapFactory.Options mBitmapOptions;
         private int mMaxWidth;
         private int mMaxHeight;
         private ImageView.ScaleType mScaleType;
-        private HashMap<String, List<String>> mHeadersMap = new HashMap<>();
-        private HashMap<String, List<String>> mQueryParameterMap = new HashMap<>();
-        private HashMap<String, String> mPathParameterMap = new HashMap<>();
+        private final HashMap<String, List<String>> mHeadersMap = new HashMap<>();
+        private final HashMap<String, List<String>> mQueryParameterMap = new HashMap<>();
+        private final HashMap<String, String> mPathParameterMap = new HashMap<>();
         private CacheControl mCacheControl;
         private Executor mExecutor;
         private OkHttpClient mOkHttpClient;
         private String mUserAgent;
+        private boolean mLogResponseBody;
+
+        @Override
+        public T logResponseBody() {
+            mLogResponseBody = true;
+            return (T) this;
+        }
 
         public GetRequestBuilder(String url) {
             this.mUrl = url;
@@ -1113,7 +1119,6 @@ public class ANRequest<T extends ANRequest> {
         }
 
         public T setBitmapOptions(BitmapFactory.Options bitmapOptions) {
-            mBitmapOptions = bitmapOptions;
             return (T) this;
         }
 
@@ -1168,23 +1173,30 @@ public class ANRequest<T extends ANRequest> {
     public static class PostRequestBuilder<T extends PostRequestBuilder> implements RequestBuilder {
 
         private Priority mPriority = Priority.MEDIUM;
-        private int mMethod = Method.POST;
-        private String mUrl;
+        private final int mMethod;
+        private final String mUrl;
         private Object mTag;
         private String mApplicationJsonString = null;
         private String mStringBody = null;
         private byte[] mByte = null;
         private File mFile = null;
-        private HashMap<String, List<String>> mHeadersMap = new HashMap<>();
-        private HashMap<String, String> mBodyParameterMap = new HashMap<>();
-        private HashMap<String, String> mUrlEncodedFormBodyParameterMap = new HashMap<>();
-        private HashMap<String, List<String>> mQueryParameterMap = new HashMap<>();
-        private HashMap<String, String> mPathParameterMap = new HashMap<>();
+        private final HashMap<String, List<String>> mHeadersMap = new HashMap<>();
+        private final HashMap<String, String> mBodyParameterMap = new HashMap<>();
+        private final HashMap<String, String> mUrlEncodedFormBodyParameterMap = new HashMap<>();
+        private final HashMap<String, List<String>> mQueryParameterMap = new HashMap<>();
+        private final HashMap<String, String> mPathParameterMap = new HashMap<>();
         private CacheControl mCacheControl;
         private Executor mExecutor;
         private OkHttpClient mOkHttpClient;
         private String mUserAgent;
         private String mCustomContentType;
+        private boolean mLogResponseBody;
+
+        @Override
+        public T logResponseBody() {
+            mLogResponseBody = true;
+            return (T) this;
+        }
 
         public PostRequestBuilder(String url) {
             this.mUrl = url;
@@ -1457,11 +1469,11 @@ public class ANRequest<T extends ANRequest> {
     public static class DownloadBuilder<T extends DownloadBuilder> implements RequestBuilder {
 
         private Priority mPriority = Priority.MEDIUM;
-        private String mUrl;
+        private final String mUrl;
         private Object mTag;
-        private HashMap<String, List<String>> mHeadersMap = new HashMap<>();
-        private HashMap<String, List<String>> mQueryParameterMap = new HashMap<>();
-        private HashMap<String, String> mPathParameterMap = new HashMap<>();
+        private final HashMap<String, List<String>> mHeadersMap = new HashMap<>();
+        private final HashMap<String, List<String>> mQueryParameterMap = new HashMap<>();
+        private final HashMap<String, String> mPathParameterMap = new HashMap<>();
         private String mDirPath;
         private String mFileName;
         private CacheControl mCacheControl;
@@ -1470,6 +1482,13 @@ public class ANRequest<T extends ANRequest> {
         private OkHttpClient mOkHttpClient;
         private String mUserAgent;
         private OnFileSaveListener fileSaveListener;
+        private boolean mLogResponseBody;
+
+        @Override
+        public T logResponseBody() {
+            mLogResponseBody = true;
+            return (T) this;
+        }
 
         public DownloadBuilder(String url,OnFileSaveListener fileSaveListener) {
             this.mUrl = url;
@@ -1645,22 +1664,29 @@ public class ANRequest<T extends ANRequest> {
     public static class MultiPartBuilder<T extends MultiPartBuilder> implements RequestBuilder {
 
         private Priority mPriority = Priority.MEDIUM;
-        private String mUrl;
+        private final String mUrl;
         private Object mTag;
-        private HashMap<String, List<String>> mHeadersMap = new HashMap<>();
-        private HashMap<String, List<String>> mQueryParameterMap = new HashMap<>();
-        private HashMap<String, String> mPathParameterMap = new HashMap<>();
-        private HashMap<String, MultipartStringBody> mMultiPartParameterMap = new HashMap<>();
-        private HashMap<String, List<MultipartFileBody>> mMultiPartFileMap = new HashMap<>();
+        private final HashMap<String, List<String>> mHeadersMap = new HashMap<>();
+        private final HashMap<String, List<String>> mQueryParameterMap = new HashMap<>();
+        private final HashMap<String, String> mPathParameterMap = new HashMap<>();
+        private final HashMap<String, MultipartStringBody> mMultiPartParameterMap = new HashMap<>();
+        private final HashMap<String, List<MultipartFileBody>> mMultiPartFileMap = new HashMap<>();
         private CacheControl mCacheControl;
         private int mPercentageThresholdForCancelling = 0;
         private Executor mExecutor;
         private OkHttpClient mOkHttpClient;
         private String mUserAgent;
         private String mCustomContentType;
+        private boolean mLogResponseBody;
 
         public MultiPartBuilder(String url) {
             this.mUrl = url;
+        }
+
+        @Override
+        public T logResponseBody() {
+            mLogResponseBody = true;
+            return (T) this;
         }
 
         @Override
@@ -1936,6 +1962,7 @@ public class ANRequest<T extends ANRequest> {
         }
     }
 
+    @NonNull
     @Override
     public String toString() {
         return "ANRequest{" +
