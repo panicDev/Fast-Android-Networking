@@ -18,7 +18,6 @@
  */
 
 apply plugin: 'com.android.library'
-apply from: '../gradle/jitpack.gradle'
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
@@ -34,6 +33,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
     packagingOptions {
         exclude 'META-INF/DEPENDENCIES.txt'
         exclude 'META-INF/LICENSE.txt'
@@ -57,3 +62,4 @@ dependencies {
 }
 
 //apply from: 'jackson-upload.gradle'
+apply from: '../gradle/jitpack.gradle'

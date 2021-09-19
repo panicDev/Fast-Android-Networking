@@ -18,7 +18,6 @@
  */
 
 apply plugin: 'com.android.library'
-apply from: '../gradle/jitpack.gradle'
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
@@ -34,6 +33,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
 }
 
 dependencies {
@@ -45,3 +49,4 @@ dependencies {
     api project(':android-networking')
 }
 //apply from: 'rx2-upload.gradle'
+apply from: '../gradle/jitpack.gradle'
