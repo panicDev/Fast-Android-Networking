@@ -15,5 +15,18 @@
  *    limitations under the License.
  */
 
-include ':app', ':android-networking', ':rx-android-networking', ':rxsampleapp', ':jackson-android-networking', ':rx2-android-networking', ':rx2sampleapp',
-        ':rx3-android-networking', ':rx3sampleapp'
+package com.rx3sampleapp;
+
+/**
+ * Created by amitshekhar on 29/03/16.
+ */
+public class ApiEndPoint {
+
+    public static final String BASE_URL = "https://fierce-cove-29863.herokuapp.com";
+    public static final String GET_JSON_ARRAY = "/getAllUsers/{pageNumber}";
+    public static final String GET_JSON_OBJECT = "/getAnUserDetail/{userId}";
+    public static final String CHECK_FOR_HEADER = "/checkForHeader";
+    public static final String POST_CREATE_AN_USER = "/createAnUser";
+    public static final String UPLOAD_IMAGE = "/uploadImage";
+
+}
