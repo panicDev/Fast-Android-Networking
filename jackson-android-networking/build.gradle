@@ -50,7 +50,7 @@ android {
 dependencies {
     api fileTree(dir: 'libs', include: ['*.jar'])
     testImplementation "junit:junit:$rootProject.ext.jUnitVersion"
-    androidTestImplementation "com.squareup.okhttp3:mockwebserver:$rootProject.ext.mockWebServerVersion"
+    androidTestImplementation "com.squareup.okhttp3:mockwebserver:$rootProject.ext.okHttp3Version"
     api "com.fasterxml.jackson.core:jackson-databind:$rootProject.ext.jacksonVersion"
     api project(':android-networking')
 }

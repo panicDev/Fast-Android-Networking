@@ -41,7 +41,7 @@ android {
 dependencies {
     api fileTree(dir: 'libs', include: ['*.jar'])
     testImplementation "junit:junit:$rootProject.ext.jUnitVersion"
-    androidTestImplementation "com.squareup.okhttp3:mockwebserver:$rootProject.ext.mockWebServerVersion"
+    androidTestImplementation "com.squareup.okhttp3:mockwebserver:$rootProject.ext.okHttp3Version"
     api "com.squareup.okhttp3:okhttp:$rootProject.ext.okHttp3Version"
     api "com.google.code.gson:gson:$rootProject.ext.gsonVersion"
     api "androidx.appcompat:appcompat:$rootProject.ext.appCompatVersion"
