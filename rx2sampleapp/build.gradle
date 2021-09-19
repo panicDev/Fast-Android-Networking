@@ -46,7 +46,7 @@ dependencies {
     androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    implementation "com.android.support:appcompat-v7:$rootProject.ext.supportAppCompatVersion"
+    implementation "androidx.appcompat:appcompat:$rootProject.ext.appCompatVersion"
     testImplementation "junit:junit:$rootProject.ext.jUnitVersion"
     implementation project(':rx2-android-networking')
 }

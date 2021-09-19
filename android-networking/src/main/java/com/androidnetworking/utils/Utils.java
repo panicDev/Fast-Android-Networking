@@ -20,6 +20,7 @@ package com.androidnetworking.utils;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Build;
 import android.widget.ImageView;
 
 import com.androidnetworking.common.ANConstants;
@@ -35,6 +36,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.FileNameMap;
 import java.net.URLConnection;
+import java.time.Duration;
 
 import okhttp3.Cache;
 import okhttp3.Response;
@@ -169,8 +171,11 @@ public class Utils {
         return (int) n;
     }
 
-    public static void saveFile(Response response, String dirPath,
-                                String fileName) throws IOException {
+    public static void saveFile(
+            Response response,
+            String dirPath,
+            String fileName
+    ) throws IOException {
         InputStream is = null;
         byte[] buf = new byte[2048];
         int len;
